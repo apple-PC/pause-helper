@@ -43,6 +43,8 @@
   button.ghost{background:var(--chip);color:var(--text)}
   button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
   button.sm{padding:7px 10px;font-size:13px;border-radius:8px}
+  button.save-btn{font-size:16px;padding:13px 22px;border-radius:12px}
+  .status{font-size:12px;color:var(--muted);min-height:18px;word-break:break-all}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .timer{
     font-size:46px;font-weight:800;text-align:center;letter-spacing:2px;
@@ -200,10 +202,15 @@
   </section>
 
   <section class="card">
-    <h2>备份与同步</h2>
-    <p class="muted">数据默认只存在这个浏览器。填一个只对「数据仓库」有写权限的 token，就能备份到私有仓库，换设备可以恢复。</p>
-    <details>
-      <summary>展开设置（token 只存在本机浏览器，不进代码、不进仓库）</summary>
+    <h2>保存到仓库</h2>
+    <p class="muted">点一下就提交到私有数据仓库。本机也留一份，断网照样能用。</p>
+    <div class="row">
+      <button id="synNow" class="save-btn">保存到仓库</button>
+      <span id="syncStatus" class="status"></span>
+    </div>
+    <p id="saveHint" class="muted">首次使用填一次 token，之后就是一键保存。</p>
+    <details id="syncDetails">
+      <summary>仓库与 token 设置（只存在本机浏览器，不进代码）</summary>
       <div class="sync-box" style="margin-top:10px">
         <label for="synOwner">账号</label>
         <input id="synOwner" placeholder="apple-PC" autocomplete="off" />
@@ -220,11 +227,9 @@
         </div>
         <div class="row">
           <button id="synSave" class="secondary sm">保存设置</button>
-          <button id="synNow" class="sm">立即备份</button>
           <button id="synPull" class="ghost sm">从仓库恢复</button>
           <button id="synClear" class="danger sm">清除 token</button>
         </div>
-        <div id="syncStatus" class="status"></div>
       </div>
     </details>
     <div class="row" style="margin-top:10px">
@@ -306,6 +311,15 @@
     return out;
   }
 
+  /* ---------------- dirty state ---------------- */
+  var dirty = false;
+  function setDirty(v){
+    dirty = v;
+    var btn = $("synNow");
+    if(btn) btn.textContent = v ? "保存到仓库（有改动）" : "保存到仓库";
+  }
+  function markDirty(){ setDirty(true); }
+
   /* ---------------- data ---------------- */
   var checkins = readJSON(K_CHECK, []);
   if(!Array.isArray(checkins)) checkins = [];
@@ -314,9 +328,9 @@
   var delays = readJSON(K_DELAY, []);
   if(!Array.isArray(delays)) delays = [];
 
-  function saveCheckins(){ writeJSON(K_CHECK, checkins); }
-  function saveRecords(){ writeJSON(K_REC, records); }
-  function saveDelays(){ writeJSON(K_DELAY, delays); }
+  function saveCheckins(){ writeJSON(K_CHECK, checkins); markDirty(); }
+  function saveRecords(){ writeJSON(K_REC, records); markDirty(); }
+  function saveDelays(){ writeJSON(K_DELAY, delays); markDirty(); }
 
   /* ---------------- theme ---------------- */
   function applyTheme(t){
@@ -707,7 +721,7 @@
       path: c.path || "data/pause-data.json",
       branch: c.branch || "main",
       token: c.token || "",
-      auto: !!c.auto
+      auto: c.auto === undefined ? true : !!c.auto
     };
   }
   function setCfg(patch){
@@ -767,7 +781,10 @@
         if(!res.ok){
           return res.json().then(function(j){ throw new Error(j.message || ("写入失败 HTTP " + res.status)); });
         }
-        setStatus("已备份 · " + new Date().toLocaleTimeString(), "ok");
+        setStatus("已保存 · " + new Date().toLocaleTimeString(), "ok");
+        setDirty(false);
+        var cc = getCfg();
+        $("saveHint").textContent = "上次保存：" + new Date().toLocaleString() + " ｜ " + cc.owner + "/" + cc.repo + "/" + cc.path;
       })
       .catch(function(err){
         setStatus("备份失败：" + err.message, "err");
@@ -794,6 +811,7 @@
         delays = Array.isArray(data.delays) ? data.delays : [];
         saveCheckins(); saveRecords(); saveDelays();
         renderAll();
+        setDirty(false);
         setStatus("已恢复 · " + checkins.length + " 天打卡 / " + records.length + " 条记录", "ok");
       })
       .catch(function(err){ setStatus("恢复失败：" + err.message, "err"); });
@@ -814,8 +832,9 @@
     $("synPath").value = c.path;
     $("synToken").value = c.token;
     $("synAuto").checked = c.auto;
-    if(c.token){ setStatus("已配置：" + c.owner + "/" + c.repo + "/" + c.path); }
-    else { setStatus("未配置 token，数据只在本机。"); }
+    if(c.token){ setStatus("已配置：" + c.owner + "/" + c.repo); }
+    else { setStatus("还没填 token，数据只在本机。"); }
+    if(c.token){ $("saveHint").textContent = "已连到 " + c.owner + "/" + c.repo + "，点按钮即保存。"; }
   }
 
   $("synSave").addEventListener("click", function(){
@@ -828,8 +847,22 @@
     });
     setStatus("设置已保存在本机浏览器", "ok");
     $("storeNote").textContent = describeStorage();
+    var c = getCfg();
+    if(c.token){
+      $("saveHint").textContent = "已连到 " + c.owner + "/" + c.repo + "，点上面按钮即保存。";
+      pushToRepo(false);
+    }
   });
-  $("synNow").addEventListener("click", function(){ pushToRepo(false); });
+  $("synNow").addEventListener("click", function(){
+    var c = getCfg();
+    if(!c.token){
+      $("syncDetails").open = true;
+      $("synToken").focus();
+      setStatus("先在下面填 token，点「保存设置」，然后再点这里", "err");
+      return;
+    }
+    pushToRepo(false);
+  });
   $("synPull").addEventListener("click", pullFromRepo);
   $("synClear").addEventListener("click", function(){
     setCfg({ token: "", auto: false });
