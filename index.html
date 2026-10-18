@@ -3,21 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#f4f6f8" />
 <title>暂停助手</title>
 <style>
   :root{
     --bg:#f4f6f8; --card:#fff; --text:#1f2937; --muted:#6b7280;
     --main:#2563eb; --main-dark:#1d4ed8; --danger:#dc2626;
-    --ok:#059669; --line:#e5e7eb; --soft:#eff6ff;
+    --ok:#059669; --line:#e5e7eb; --soft:#eff6ff; --chip:#f3f4f6;
+    --heat0:#eef1f5; --heat1:#c7dcfb; --heat2:#8ebbf6; --heat3:#4d94ee; --heat4:#1d4ed8;
+  }
+  body.dark{
+    --bg:#0f1420; --card:#171e2b; --text:#e5e9f0; --muted:#94a3b8;
+    --main:#3b82f6; --main-dark:#60a5fa; --danger:#f87171;
+    --ok:#34d399; --line:#2a3446; --soft:#1b2537; --chip:#212b3b;
+    --heat0:#212b3b; --heat1:#1e3a5f; --heat2:#2b5fa8; --heat3:#4d94ee; --heat4:#93c5fd;
   }
   *{box-sizing:border-box}
   body{
-    margin:0; padding:16px; font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    margin:0; padding:16px 16px 40px; font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
     background:var(--bg); color:var(--text); line-height:1.6;
+    transition:background .25s,color .25s;
   }
   .wrap{max-width:760px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
   h1{font-size:22px;margin:8px 0 4px}
-  .sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 16px}
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:14px;
     padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.04);
@@ -25,56 +35,102 @@
   h2{font-size:17px;margin:0 0 10px}
   button{
     border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:600;
-    cursor:pointer;background:var(--main);color:#fff;
+    cursor:pointer;background:var(--main);color:#fff;font-family:inherit;
   }
-  button:hover{background:var(--main-dark)}
-  button.secondary{background:#eef2ff;color:var(--main-dark)}
-  button.secondary:hover{background:#e0e7ff}
-  button.ghost{background:#f3f4f6;color:#374151}
-  button.ghost:hover{background:#e5e7eb}
-  button.danger{background:#fee2e2;color:var(--danger)}
-  button.danger:hover{background:#fecaca}
+  button:hover{filter:brightness(.94)}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  button.secondary{background:var(--soft);color:var(--main-dark)}
+  button.ghost{background:var(--chip);color:var(--text)}
+  button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+  button.sm{padding:7px 10px;font-size:13px;border-radius:8px}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .timer{
     font-size:46px;font-weight:800;text-align:center;letter-spacing:2px;
-    margin:12px 0;color:var(--main-dark);font-variant-numeric:tabular-nums;
+    margin:12px 0 4px;color:var(--main-dark);font-variant-numeric:tabular-nums;
   }
+  .bar{height:6px;border-radius:99px;background:var(--chip);overflow:hidden;margin-bottom:14px}
+  .bar>i{display:block;height:100%;width:0;background:var(--main);transition:width .9s linear}
   .steps{
     background:var(--soft);border-radius:12px;padding:12px 14px;margin:10px 0;
   }
   .steps ol{margin:0;padding-left:20px}
   .steps li{margin:4px 0}
-  .hidden{display:none}
-  .streak{font-size:30px;font-weight:800;color:var(--ok)}
+  .hidden{display:none !important}
+  .streak{font-size:30px;font-weight:800;color:var(--ok);font-variant-numeric:tabular-nums}
   label{display:block;font-size:14px;font-weight:600;margin:8px 0 4px}
   input,textarea,select{
     width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;
-    font:inherit;background:#fff;color:var(--text);
+    font:inherit;background:var(--card);color:var(--text);
   }
   textarea{min-height:64px;resize:vertical}
-  .record{
-    border-top:1px solid var(--line);padding:10px 0;font-size:14px;
-  }
+  .record{border-top:1px solid var(--line);padding:10px 0;font-size:14px}
   .record:first-child{border-top:0}
   .record .meta{color:var(--muted);font-size:12px}
   .record .del{float:right;font-size:12px;padding:4px 8px}
   details summary{cursor:pointer;font-weight:700}
   .muted{color:var(--muted);font-size:13px}
   .ok-text{color:var(--ok);font-weight:700}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:12px}
+  .stat{background:var(--soft);border-radius:10px;padding:10px 8px;text-align:center}
+  .stat b{display:block;font-size:22px;color:var(--main-dark);font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px;color:var(--muted)}
+  .heat{display:grid;grid-template-rows:repeat(7,13px);grid-auto-flow:column;grid-auto-columns:13px;gap:3px;margin-top:12px;overflow-x:auto;padding-bottom:4px}
+  .heat i{display:block;width:13px;height:13px;border-radius:3px;background:var(--heat0)}
+  .heat i[data-lv="1"]{background:var(--heat1)}
+  .heat i[data-lv="2"]{background:var(--heat2)}
+  .heat i[data-lv="3"]{background:var(--heat3)}
+  .heat i[data-lv="4"]{background:var(--heat4)}
+  .heat i.today{outline:2px solid var(--main);outline-offset:1px}
+  .legend{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--muted);margin-top:6px}
+  .legend i{width:11px;height:11px;border-radius:2px;display:block}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}
+  .chips button{background:var(--chip);color:var(--muted);font-size:12px;padding:5px 9px;border-radius:99px;font-weight:500}
+  .chips button:hover{background:var(--soft);color:var(--main-dark)}
+  .breath-wrap{display:flex;justify-content:center;margin:6px 0 10px}
+  .breath-circle{
+    width:104px;height:104px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--soft);border:2px solid var(--main);color:var(--main-dark);
+    font-weight:700;font-size:15px;will-change:transform;
+  }
+  .overlay{
+    position:fixed;inset:0;background:var(--bg);z-index:50;display:none;
+    padding:24px 18px;overflow:auto;
+  }
+  .overlay.on{display:block}
+  .overlay h2{font-size:26px;text-align:center;margin-top:8px}
+  .overlay ol{font-size:19px;line-height:2;padding-left:22px}
+  .overlay .big{font-size:20px;padding:16px;width:100%;margin-top:14px}
+  .sync-box{display:grid;gap:8px}
+  .status{font-size:12px;color:var(--muted);min-height:18px;word-break:break-all}
+  .status.err{color:var(--danger)}
+  .status.ok{color:var(--ok)}
+  @media(max-width:420px){.timer{font-size:40px}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>暂停助手</h1>
-  <div class="sub">目标不是跟记忆打架，而是：离开场景 → 延迟 → 记录 → 恢复。</div>
+  <header>
+    <div>
+      <h1>暂停助手</h1>
+      <p class="sub">离开场景 → 延迟 → 记录 → 恢复。有念头不算没守住。</p>
+    </div>
+    <button id="themeBtn" class="ghost sm" title="切换深色/浅色">深色</button>
+  </header>
 
-  <section class="card">
+  <section class="card" id="urgeCard">
     <h2>我现在想重复旧习惯</h2>
-    <p class="muted">先别硬扛，点下面开始 15 分钟延迟。有念头不算没守住。</p>
-    <button id="startBtn">开始 15 分钟延迟</button>
+    <p class="muted">先别硬扛，点下面开始 15 分钟延迟。关掉页面再回来，计时还在。</p>
+    <div class="row">
+      <button id="startBtn">开始 15 分钟延迟</button>
+      <button id="emergencyBtn" class="ghost">紧急模式（全屏）</button>
+    </div>
 
     <div id="timerBox" class="hidden">
       <div id="timer" class="timer">15:00</div>
+      <div class="bar"><i id="barFill"></i></div>
+      <div class="breath-wrap">
+        <div id="breathCircle" class="breath-circle">准备</div>
+      </div>
       <div class="steps">
         <strong>现在做这几步：</strong>
         <ol>
@@ -90,6 +146,7 @@
         <button id="doneBtn">我完成了</button>
         <button id="stopBtn" class="ghost">先停下计时</button>
       </div>
+      <p id="timerNote" class="muted"></p>
     </div>
   </section>
 
@@ -102,34 +159,87 @@
       <button id="checkinBtn">今天完成了</button>
       <span id="checkinMsg" class="ok-text"></span>
     </div>
-    <p class="muted">只记录“今天完成了”，不写自责小作文。</p>
+    <div class="stat-grid">
+      <div class="stat"><b id="stTotal">0</b><span>累计天数</span></div>
+      <div class="stat"><b id="stBest">0</b><span>最长连续</span></div>
+      <div class="stat"><b id="stWeek">0</b><span>近 7 天延迟</span></div>
+      <div class="stat"><b id="stRec">0</b><span>记录条数</span></div>
+    </div>
+    <div id="heat" class="heat"></div>
+    <div class="legend">
+      少 <i style="background:var(--heat0)"></i><i style="background:var(--heat1)"></i><i style="background:var(--heat2)"></i><i style="background:var(--heat3)"></i><i style="background:var(--heat4)"></i> 多
+      <span style="margin-left:8px">近 8 周</span>
+    </div>
+    <p class="muted">只记录「今天完成了」，不写自责小作文。</p>
   </section>
 
   <section class="card">
     <h2>记录容易发生的时刻</h2>
     <form id="recordForm">
       <label for="scene">当时在哪/在做什么</label>
-      <input id="scene" placeholder="例如：睡前躺床上刷手机" required />
+      <input id="scene" placeholder="例如：睡前躺床上刷手机" required autocomplete="off" />
+      <div class="chips" data-for="scene"></div>
 
       <label for="trigger">当时是什么念头/情境</label>
-      <input id="trigger" placeholder="例如：无聊、焦虑、刷到不想看的内容" required />
+      <input id="trigger" placeholder="例如：无聊、焦虑、刷到不想看的内容" required autocomplete="off" />
+      <div class="chips" data-for="trigger"></div>
 
       <label for="plan">下次怎么打断</label>
-      <input id="plan" placeholder="例如：手机放远，起身洗脸，计时15分钟" required />
+      <input id="plan" placeholder="例如：手机放远，起身洗脸，计时15分钟" required autocomplete="off" />
+      <div class="chips" data-for="plan"></div>
 
       <div class="row" style="margin-top:10px">
         <button type="submit">保存记录</button>
         <button type="button" id="clearRecords" class="danger">清空全部记录</button>
       </div>
     </form>
+    <div style="margin-top:12px">
+      <input id="search" placeholder="搜索记录（场景 / 念头 / 计划）" autocomplete="off" />
+    </div>
     <div id="records" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card">
+    <h2>备份与同步</h2>
+    <p class="muted">数据默认只存在这个浏览器。填一个只对「数据仓库」有写权限的 token，就能备份到私有仓库，换设备可以恢复。</p>
+    <details>
+      <summary>展开设置（token 只存在本机浏览器，不进代码、不进仓库）</summary>
+      <div class="sync-box" style="margin-top:10px">
+        <label for="synOwner">账号</label>
+        <input id="synOwner" placeholder="apple-PC" autocomplete="off" />
+        <label for="synRepo">数据仓库（建议私有）</label>
+        <input id="synRepo" placeholder="pause-helper-data" autocomplete="off" />
+        <label for="synPath">文件路径</label>
+        <input id="synPath" placeholder="data/pause-data.json" autocomplete="off" />
+        <label for="synToken">Token（fine-grained，仅 Contents 读写）</label>
+        <input id="synToken" type="password" placeholder="github_pat_..." autocomplete="off" />
+        <div class="row">
+          <label style="margin:0;display:flex;align-items:center;gap:6px;font-weight:500">
+            <input type="checkbox" id="synAuto" style="width:auto" /> 改动后自动备份
+          </label>
+        </div>
+        <div class="row">
+          <button id="synSave" class="secondary sm">保存设置</button>
+          <button id="synNow" class="sm">立即备份</button>
+          <button id="synPull" class="ghost sm">从仓库恢复</button>
+          <button id="synClear" class="danger sm">清除 token</button>
+        </div>
+        <div id="syncStatus" class="status"></div>
+      </div>
+    </details>
+    <div class="row" style="margin-top:10px">
+      <button id="exportBtn" class="ghost sm">导出 JSON</button>
+      <button id="importBtn" class="ghost sm">导入 JSON</button>
+      <input id="importFile" type="file" accept="application/json,.json" class="hidden" />
+    </div>
+    <p id="storeNote" class="muted" style="margin-top:8px"></p>
   </section>
 
   <section class="card">
     <details>
       <summary>没守住后的恢复预案（点开）</summary>
       <ol>
-        <li>不骂自己、不发毒誓、不说“全完了”。</li>
+        <li>不骂自己、不发毒誓、不说「全完了」。</li>
         <li>24 小时内恢复原计划。</li>
         <li>只记一句：什么时候、在哪、当时什么念头、下次怎么打断。</li>
         <li>调整环境，比惩罚自己有用。</li>
@@ -138,186 +248,355 @@
     </details>
   </section>
 
-  <p class="muted">提示：这是自助辅助工具，不替代专业帮助。所有记录只保存在本机浏览器。</p>
+  <p class="muted">提示：这是自助辅助工具，不替代专业帮助。</p>
+</div>
+
+<div id="emergency" class="overlay">
+  <h2>停一下，先拖 15 分钟</h2>
+  <div class="breath-wrap">
+    <div id="breathCircle2" class="breath-circle">准备</div>
+  </div>
+  <ol>
+    <li>站起来，离开现在的位置。</li>
+    <li>开灯，走到另一个房间。</li>
+    <li>冷水洗手洗脸，喝几口水。</li>
+    <li>跟着圆圈呼吸：吸 4 秒 → 停 2 秒 → 呼 6 秒。</li>
+    <li>念一句：念头会降，我不必现在跟着走。</li>
+  </ol>
+  <button id="emStart" class="big">开始 15 分钟延迟</button>
+  <button id="emClose" class="ghost big" style="margin-top:10px">返回</button>
 </div>
 
 <script>
 (function(){
-  const TIMER_KEY = "pauseTimer";
-  const CHECK_KEY = "pauseCheckinDates";
-  const REC_KEY = "pauseRecords";
+  "use strict";
 
-  const startBtn = document.getElementById("startBtn");
-  const timerBox = document.getElementById("timerBox");
-  const timerEl = document.getElementById("timer");
-  const againBtn = document.getElementById("againBtn");
-  const doneBtn = document.getElementById("doneBtn");
-  const stopBtn = document.getElementById("stopBtn");
+  var K_CHECK = "pauseCheckinDates";
+  var K_REC   = "pauseRecords";
+  var K_DELAY = "pauseDelays";
+  var K_TIMER = "pauseTimer";
+  var K_SYNC  = "pauseSync";
+  var K_THEME = "pauseTheme";
 
-  let remaining = 15 * 60;
-  let interval = null;
-
+  function $(id){ return document.getElementById(id); }
+  function readJSON(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      if(raw === null) return fallback;
+      var v = JSON.parse(raw);
+      return (v === null || v === undefined) ? fallback : v;
+    }catch(e){ return fallback; }
+  }
+  function writeJSON(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+  function dateStr(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function todayStr(){ return dateStr(new Date()); }
+  function dayStart(d){ var x = new Date(d.getTime()); x.setHours(0,0,0,0); return x; }
   function fmtTime(sec){
-    const m = Math.floor(sec / 60).toString().padStart(2,"0");
-    const s = Math.floor(sec % 60).toString().padStart(2,"0");
+    var m = Math.floor(sec/60).toString().padStart(2,"0");
+    var s = Math.floor(sec%60).toString().padStart(2,"0");
     return m + ":" + s;
   }
-
-  function renderTimer(){
-    timerEl.textContent = fmtTime(Math.max(0, remaining));
+  function uniq(arr){
+    var seen = {}, out = [];
+    arr.forEach(function(v){ if(!seen[v]){ seen[v] = 1; out.push(v); } });
+    return out;
   }
 
-  function tick(){
-    remaining--;
-    renderTimer();
-    if(remaining <= 0){
-      clearInterval(interval);
-      interval = null;
-      timerEl.textContent = "00:00";
-      alert("你已经延迟了 15 分钟。念头会降下来。可以继续延迟，或记录容易发生的时刻。");
+  /* ---------------- data ---------------- */
+  var checkins = readJSON(K_CHECK, []);
+  if(!Array.isArray(checkins)) checkins = [];
+  var records = readJSON(K_REC, []);
+  if(!Array.isArray(records)) records = [];
+  var delays = readJSON(K_DELAY, []);
+  if(!Array.isArray(delays)) delays = [];
+
+  function saveCheckins(){ writeJSON(K_CHECK, checkins); }
+  function saveRecords(){ writeJSON(K_REC, records); }
+  function saveDelays(){ writeJSON(K_DELAY, delays); }
+
+  /* ---------------- theme ---------------- */
+  function applyTheme(t){
+    if(t === "dark"){ document.body.classList.add("dark"); $("themeBtn").textContent = "浅色"; }
+    else { document.body.classList.remove("dark"); $("themeBtn").textContent = "深色"; }
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute("content", t === "dark" ? "#0f1420" : "#f4f6f8");
+  }
+  var savedTheme = localStorage.getItem(K_THEME);
+  if(!savedTheme){
+    savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+  }
+  applyTheme(savedTheme);
+  $("themeBtn").addEventListener("click", function(){
+    var next = document.body.classList.contains("dark") ? "light" : "dark";
+    try{ localStorage.setItem(K_THEME, next); }catch(e){}
+    applyTheme(next);
+  });
+
+  /* ---------------- stats ---------------- */
+  function calcStreak(){
+    var set = {};
+    checkins.forEach(function(d){ set[d] = 1; });
+    var d = dayStart(new Date());
+    if(!set[dateStr(d)]){
+      d.setDate(d.getDate() - 1);
+      if(!set[dateStr(d)]) return 0;
+    }
+    var count = 0;
+    while(set[dateStr(d)]){ count++; d.setDate(d.getDate() - 1); }
+    return count;
+  }
+  function calcBest(){
+    var keys = uniq(checkins).sort();
+    var best = 0, run = 0, prev = null;
+    keys.forEach(function(k){
+      var cur = new Date(k + "T00:00:00");
+      if(prev && Math.round((cur - prev) / 86400000) === 1){ run++; }
+      else { run = 1; }
+      if(run > best) best = run;
+      prev = cur;
+    });
+    return best;
+  }
+  function delaysInLastDays(n){
+    var from = Date.now() - n * 86400000;
+    return delays.filter(function(t){ return t >= from; }).length;
+  }
+
+  function renderStats(){
+    $("streak").textContent = calcStreak();
+    $("stTotal").textContent = uniq(checkins).length;
+    $("stBest").textContent = calcBest();
+    $("stWeek").textContent = delaysInLastDays(7);
+    $("stRec").textContent = records.length;
+
+    var today = todayStr();
+    var msg = $("checkinMsg");
+    if(checkins.indexOf(today) !== -1){ msg.textContent = "今天已完成 ✓"; $("checkinBtn").disabled = true; }
+    else { msg.textContent = ""; $("checkinBtn").disabled = false; }
+  }
+
+  function renderHeat(){
+    var box = $("heat");
+    box.innerHTML = "";
+    var today = dayStart(new Date());
+    var start = new Date(today.getTime() - 55 * 86400000);
+    start.setDate(start.getDate() - start.getDay());
+    var set = {};
+    checkins.forEach(function(d){ set[d] = 1; });
+    var cur = new Date(start.getTime());
+    var tKey = dateStr(today);
+    var guard = 0;
+    while(cur <= today && guard < 200){
+      var k = dateStr(cur);
+      var el = document.createElement("i");
+      el.setAttribute("data-lv", set[k] ? "4" : "0");
+      el.title = k + (set[k] ? " 已完成" : " 未记录");
+      if(k === tKey) el.className = "today";
+      box.appendChild(el);
+      cur.setDate(cur.getDate() + 1);
+      guard++;
     }
   }
 
+  /* ---------------- timer ---------------- */
+  var remaining = 15 * 60;
+  var totalSec = 15 * 60;
+  var endAt = 0;
+  var interval = null;
+  var rafId = null;
+
+  var startBtn = $("startBtn"), timerBox = $("timerBox"), timerEl = $("timer");
+
+  function setTimerUI(){
+    timerEl.textContent = fmtTime(Math.max(0, remaining));
+    var done = Math.max(0, totalSec - remaining);
+    $("barFill").style.width = (totalSec ? Math.min(100, done / totalSec * 100) : 0) + "%";
+  }
+
+  function persistTimer(){
+    if(endAt > Date.now()){ writeJSON(K_TIMER, { endAt: endAt, total: totalSec }); }
+    else { localStorage.removeItem(K_TIMER); }
+  }
+
+  function startBreath(){
+    stopBreath();
+    var t0 = performance.now();
+    var c1 = $("breathCircle"), c2 = $("breathCircle2");
+    function frame(now){
+      var p = ((now - t0) / 1000) % 12;
+      var scale, text;
+      if(p < 4){ scale = 0.72 + (p/4) * 0.28; text = "吸气"; }
+      else if(p < 6){ scale = 1; text = "停住"; }
+      else { scale = 1 - ((p-6)/6) * 0.28; text = "呼气"; }
+      var s = "scale(" + scale.toFixed(3) + ")";
+      if(c1){ c1.style.transform = s; c1.textContent = text; }
+      if(c2){ c2.style.transform = s; c2.textContent = text; }
+      rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+  function stopBreath(){
+    if(rafId){ cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function tick(){
+    remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+    setTimerUI();
+    if(remaining <= 0) finishTimer();
+  }
+
+  function finishTimer(){
+    if(interval){ clearInterval(interval); interval = null; }
+    stopBreath();
+    localStorage.removeItem(K_TIMER);
+    timerEl.textContent = "00:00";
+    $("barFill").style.width = "100%";
+    delays.push(Date.now());
+    saveDelays();
+    renderStats();
+    $("timerNote").textContent = "完成了这一轮延迟。记一下刚才的场景，下次更容易打断。";
+    scheduleSync();
+    try{
+      if(window.navigator && navigator.vibrate) navigator.vibrate([200,100,200]);
+      if("Notification" in window && Notification.permission === "granted"){
+        new Notification("延迟完成", { body: "15 分钟过去了，念头应该降下来了。" });
+      }
+    }catch(e){}
+    alert("你已经延迟了 15 分钟。念头会降下来。可以继续延迟，或记录一下容易发生的时刻。");
+  }
+
   function startTimer(minutes){
-    if(interval) clearInterval(interval);
-    remaining = minutes * 60;
-    renderTimer();
+    if(interval){ clearInterval(interval); interval = null; }
+    totalSec = minutes * 60;
+    remaining = totalSec;
+    endAt = Date.now() + remaining * 1000;
+    setTimerUI();
     timerBox.classList.remove("hidden");
     startBtn.classList.add("hidden");
-    interval = setInterval(tick, 1000);
+    $("timerNote").textContent = "";
+    persistTimer();
+    interval = setInterval(tick, 250);
+    startBreath();
+    try{ if("Notification" in window && Notification.permission === "default") Notification.requestPermission(); }catch(e){}
   }
 
   function stopTimer(){
-    if(interval) clearInterval(interval);
-    interval = null;
+    if(interval){ clearInterval(interval); interval = null; }
+    stopBreath();
+    localStorage.removeItem(K_TIMER);
+    endAt = 0;
     timerBox.classList.add("hidden");
     startBtn.classList.remove("hidden");
+    $("timerNote").textContent = "";
   }
 
-  startBtn.addEventListener("click", () => startTimer(15));
-  againBtn.addEventListener("click", () => startTimer(5));
-  stopBtn.addEventListener("click", stopTimer);
-  doneBtn.addEventListener("click", () => {
+  startBtn.addEventListener("click", function(){ startTimer(15); });
+  $("againBtn").addEventListener("click", function(){ startTimer(5); });
+  $("stopBtn").addEventListener("click", stopTimer);
+  $("doneBtn").addEventListener("click", function(){
     stopTimer();
     markCheckin();
   });
 
-  function todayStr(){
-    const d = new Date();
-    return d.getFullYear() + "-" +
-      String(d.getMonth()+1).padStart(2,"0") + "-" +
-      String(d.getDate()).padStart(2,"0");
-  }
-
-  function dateStr(d){
-    return d.getFullYear() + "-" +
-      String(d.getMonth()+1).padStart(2,"0") + "-" +
-      String(d.getDate()).padStart(2,"0");
-  }
-
-  function getCheckins(){
-    try{
-      const arr = JSON.parse(localStorage.getItem(CHECK_KEY) || "[]");
-      return Array.isArray(arr) ? arr : [];
-    }catch(e){ return []; }
-  }
-
-  function saveCheckins(arr){
-    localStorage.setItem(CHECK_KEY, JSON.stringify(arr));
-  }
-
-  function calcStreak(){
-    const set = new Set(getCheckins());
-    let d = new Date();
-    d.setHours(0,0,0,0);
-    if(!set.has(dateStr(d))){
-      d.setDate(d.getDate() - 1);
-      if(!set.has(dateStr(d))) return 0;
+  (function restoreTimer(){
+    var saved = readJSON(K_TIMER, null);
+    if(!saved || !saved.endAt) return;
+    if(saved.endAt > Date.now()){
+      totalSec = saved.total || 900;
+      endAt = saved.endAt;
+      remaining = Math.max(0, Math.round((endAt - Date.now())/1000));
+      setTimerUI();
+      timerBox.classList.remove("hidden");
+      startBtn.classList.add("hidden");
+      $("timerNote").textContent = "计时是从你上次关页面时接着走的。";
+      interval = setInterval(tick, 250);
+      startBreath();
+    } else {
+      localStorage.removeItem(K_TIMER);
     }
-    let count = 0;
-    while(set.has(dateStr(d))){
-      count++;
-      d.setDate(d.getDate() - 1);
-    }
-    return count;
-  }
+  })();
 
-  function renderStreak(){
-    document.getElementById("streak").textContent = calcStreak();
-    const today = todayStr();
-    const msg = document.getElementById("checkinMsg");
-    if(getCheckins().includes(today)){
-      msg.textContent = "今天已完成 ✓";
-      document.getElementById("checkinBtn").disabled = true;
-    }else{
-      msg.textContent = "";
-      document.getElementById("checkinBtn").disabled = false;
-    }
-  }
-
+  /* ---------------- checkin ---------------- */
   function markCheckin(){
-    const arr = getCheckins();
-    const today = todayStr();
-    if(!arr.includes(today)){
-      arr.push(today);
-      saveCheckins(arr);
+    var today = todayStr();
+    if(checkins.indexOf(today) === -1){
+      checkins.push(today);
+      saveCheckins();
     }
-    renderStreak();
+    renderStats();
+    renderHeat();
+    scheduleSync();
   }
+  $("checkinBtn").addEventListener("click", markCheckin);
 
-  document.getElementById("checkinBtn").addEventListener("click", markCheckin);
+  /* ---------------- records ---------------- */
+  var sceneEl = $("scene"), triggerEl = $("trigger"), planEl = $("plan");
+  var recordsEl = $("records");
+  var searchEl = $("search");
 
-  const form = document.getElementById("recordForm");
-  const sceneEl = document.getElementById("scene");
-  const triggerEl = document.getElementById("trigger");
-  const planEl = document.getElementById("plan");
-  const recordsEl = document.getElementById("records");
+  var PRESETS = {
+    scene: ["睡前躺床上", "刚醒赖床", "一个人待着", "刷手机时", "洗澡后", "压力大加班后"],
+    trigger: ["无聊", "焦虑", "孤独", "累了想放松", "刷到擦边内容", "被事情打击"],
+    plan: ["手机放客厅", "起身洗脸", "计时15分钟", "出门走一圈", "找人聊两句", "做20个深蹲"]
+  };
 
-  function getRecords(){
-    try{
-      const arr = JSON.parse(localStorage.getItem(REC_KEY) || "[]");
-      return Array.isArray(arr) ? arr : [];
-    }catch(e){ return []; }
-  }
-
-  function saveRecords(arr){
-    localStorage.setItem(REC_KEY, JSON.stringify(arr));
-  }
+  Array.prototype.forEach.call(document.querySelectorAll(".chips"), function(box){
+    var key = box.getAttribute("data-for");
+    (PRESETS[key] || []).forEach(function(txt){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = txt;
+      b.addEventListener("click", function(){
+        var input = key === "scene" ? sceneEl : (key === "trigger" ? triggerEl : planEl);
+        input.value = input.value ? (input.value + "、" + txt) : txt;
+        input.focus();
+      });
+      box.appendChild(b);
+    });
+  });
 
   function renderRecords(){
-    const arr = getRecords();
+    var kw = (searchEl.value || "").trim().toLowerCase();
+    var list = records.slice().reverse().filter(function(r){
+      if(!kw) return true;
+      return ((r.scene||"") + " " + (r.trigger||"") + " " + (r.plan||"")).toLowerCase().indexOf(kw) !== -1;
+    });
     recordsEl.innerHTML = "";
-    if(arr.length === 0){
-      const p = document.createElement("p");
+    if(list.length === 0){
+      var p = document.createElement("p");
       p.className = "muted";
-      p.textContent = "还没有记录。";
+      p.textContent = records.length === 0 ? "还没有记录。" : "没有匹配的记录。";
       recordsEl.appendChild(p);
       return;
     }
-    arr.slice().reverse().forEach(item => {
-      const div = document.createElement("div");
+    list.forEach(function(item){
+      var div = document.createElement("div");
       div.className = "record";
 
-      const del = document.createElement("button");
-      del.className = "del danger";
+      var del = document.createElement("button");
+      del.className = "del danger sm";
       del.textContent = "删除";
-      del.addEventListener("click", () => {
-        const next = getRecords().filter(r => r.id !== item.id);
-        saveRecords(next);
+      del.addEventListener("click", function(){
+        records = records.filter(function(r){ return r.id !== item.id; });
+        saveRecords();
         renderRecords();
+        renderStats();
+        scheduleSync();
       });
 
-      const meta = document.createElement("div");
+      var meta = document.createElement("div");
       meta.className = "meta";
       meta.textContent = item.time;
 
-      const line1 = document.createElement("div");
+      var line1 = document.createElement("div");
       line1.textContent = "场景：" + item.scene;
-
-      const line2 = document.createElement("div");
+      var line2 = document.createElement("div");
       line2.textContent = "当时的念头/情境：" + item.trigger;
-
-      const line3 = document.createElement("div");
+      var line3 = document.createElement("div");
       line3.textContent = "下次打断：" + item.plan;
 
       div.appendChild(del);
@@ -329,34 +608,257 @@
     });
   }
 
-  form.addEventListener("submit", (e) => {
+  $("recordForm").addEventListener("submit", function(e){
     e.preventDefault();
-    const scene = sceneEl.value.trim();
-    const trigger = triggerEl.value.trim();
-    const plan = planEl.value.trim();
+    var scene = sceneEl.value.trim(), trigger = triggerEl.value.trim(), plan = planEl.value.trim();
     if(!scene || !trigger || !plan) return;
-
-    const arr = getRecords();
-    arr.push({
+    records.push({
       id: String(Date.now()) + Math.random().toString(16).slice(2),
       time: new Date().toLocaleString(),
-      scene, trigger, plan
+      scene: scene, trigger: trigger, plan: plan
     });
-    saveRecords(arr);
-    form.reset();
+    saveRecords();
+    $("recordForm").reset();
     renderRecords();
+    renderStats();
+    scheduleSync();
   });
 
-  document.getElementById("clearRecords").addEventListener("click", () => {
-    if(confirm("确定清空全部记录？")){
-      saveRecords([]);
+  searchEl.addEventListener("input", renderRecords);
+
+  $("clearRecords").addEventListener("click", function(){
+    if(confirm("确定清空全部记录？（打卡和统计不受影响）")){
+      records = [];
+      saveRecords();
       renderRecords();
+      renderStats();
+      scheduleSync();
     }
   });
 
-  renderTimer();
-  renderStreak();
-  renderRecords();
+  /* ---------------- emergency ---------------- */
+  $("emergencyBtn").addEventListener("click", function(){
+    $("emergency").classList.add("on");
+    startBreath();
+  });
+  $("emClose").addEventListener("click", function(){
+    $("emergency").classList.remove("on");
+    stopBreath();
+  });
+  $("emStart").addEventListener("click", function(){
+    $("emergency").classList.remove("on");
+    stopBreath();
+    startTimer(15);
+    try{ window.scrollTo({ top: 0, behavior: "smooth" }); }catch(e){ window.scrollTo(0,0); }
+  });
+
+  /* ---------------- export / import ---------------- */
+  function snapshot(){
+    return {
+      app: "pause-helper",
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      checkins: checkins,
+      records: records,
+      delays: delays
+    };
+  }
+
+  $("exportBtn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "pause-data-" + todayStr() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.parentNode.removeChild(a); }, 1000);
+  });
+
+  $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+  $("importFile").addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(String(reader.result));
+        if(!data || (!data.checkins && !data.records)) throw new Error("格式不对");
+        if(!confirm("导入会用文件内容覆盖本机的打卡与记录，继续？")) return;
+        checkins = Array.isArray(data.checkins) ? data.checkins : [];
+        records = Array.isArray(data.records) ? data.records : [];
+        delays = Array.isArray(data.delays) ? data.delays : [];
+        saveCheckins(); saveRecords(); saveDelays();
+        renderAll();
+        setStatus("已从文件导入：" + checkins.length + " 天打卡，" + records.length + " 条记录", "ok");
+      }catch(err){
+        setStatus("导入失败：" + err.message, "err");
+      }
+      $("importFile").value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  /* ---------------- sync to private repo ---------------- */
+  function getCfg(){
+    var c = readJSON(K_SYNC, {});
+    return {
+      owner: c.owner || "apple-PC",
+      repo: c.repo || "pause-helper-data",
+      path: c.path || "data/pause-data.json",
+      branch: c.branch || "main",
+      token: c.token || "",
+      auto: !!c.auto
+    };
+  }
+  function setCfg(patch){
+    var c = getCfg();
+    Object.keys(patch).forEach(function(k){ c[k] = patch[k]; });
+    writeJSON(K_SYNC, c);
+  }
+  function setStatus(msg, kind){
+    var el = $("syncStatus");
+    el.textContent = msg || "";
+    el.className = "status" + (kind ? " " + kind : "");
+  }
+  function b64encode(str){
+    var bytes = new TextEncoder().encode(str);
+    var bin = "";
+    for(var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function b64decode(b64){
+    var bin = atob(String(b64).replace(/\s/g,""));
+    var bytes = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function apiUrl(cfg){
+    return "https://api.github.com/repos/" + cfg.owner + "/" + cfg.repo + "/contents/" + cfg.path;
+  }
+  function ghHeaders(cfg){
+    return { "Authorization": "Bearer " + cfg.token, "Accept": "application/vnd.github+json" };
+  }
+
+  var syncing = false;
+  function pushToRepo(silent){
+    var cfg = getCfg();
+    if(!cfg.token){ if(!silent) setStatus("先填 token 并保存设置", "err"); return; }
+    if(syncing) return;
+    syncing = true;
+    if(!silent) setStatus("正在备份…");
+    var content = JSON.stringify(snapshot(), null, 2);
+    fetch(apiUrl(cfg) + "?ref=" + encodeURIComponent(cfg.branch), { headers: ghHeaders(cfg) })
+      .then(function(r){
+        if(r.status === 404) return null;
+        if(r.status === 401 || r.status === 403) throw new Error("token 无效或没有该仓库权限（" + r.status + "）");
+        if(!r.ok) throw new Error("读取失败 HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(exist){
+        var body = { message: "backup " + new Date().toISOString(), content: b64encode(content), branch: cfg.branch };
+        if(exist && exist.sha) body.sha = exist.sha;
+        return fetch(apiUrl(cfg), {
+          method: "PUT",
+          headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders(cfg)),
+          body: JSON.stringify(body)
+        });
+      })
+      .then(function(res){
+        if(!res.ok){
+          return res.json().then(function(j){ throw new Error(j.message || ("写入失败 HTTP " + res.status)); });
+        }
+        setStatus("已备份 · " + new Date().toLocaleTimeString(), "ok");
+      })
+      .catch(function(err){
+        setStatus("备份失败：" + err.message, "err");
+      })
+      .then(function(){ syncing = false; });
+  }
+
+  function pullFromRepo(){
+    var cfg = getCfg();
+    if(!cfg.token){ setStatus("先填 token 并保存设置", "err"); return; }
+    setStatus("正在读取…");
+    fetch(apiUrl(cfg) + "?ref=" + encodeURIComponent(cfg.branch), { headers: ghHeaders(cfg) })
+      .then(function(r){
+        if(r.status === 404) throw new Error("仓库或文件不存在");
+        if(r.status === 401 || r.status === 403) throw new Error("token 无效或没有该仓库权限（" + r.status + "）");
+        if(!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(json){
+        var data = JSON.parse(b64decode(json.content));
+        if(!confirm("会用仓库里 " + (data.updatedAt || "未知时间") + " 的数据覆盖本机，继续？")){ setStatus("已取消"); return; }
+        checkins = Array.isArray(data.checkins) ? data.checkins : [];
+        records = Array.isArray(data.records) ? data.records : [];
+        delays = Array.isArray(data.delays) ? data.delays : [];
+        saveCheckins(); saveRecords(); saveDelays();
+        renderAll();
+        setStatus("已恢复 · " + checkins.length + " 天打卡 / " + records.length + " 条记录", "ok");
+      })
+      .catch(function(err){ setStatus("恢复失败：" + err.message, "err"); });
+  }
+
+  var syncTimer = null;
+  function scheduleSync(){
+    var cfg = getCfg();
+    if(!cfg.auto || !cfg.token) return;
+    if(syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(function(){ pushToRepo(true); }, 2500);
+  }
+
+  function fillCfgUI(){
+    var c = getCfg();
+    $("synOwner").value = c.owner;
+    $("synRepo").value = c.repo;
+    $("synPath").value = c.path;
+    $("synToken").value = c.token;
+    $("synAuto").checked = c.auto;
+    if(c.token){ setStatus("已配置：" + c.owner + "/" + c.repo + "/" + c.path); }
+    else { setStatus("未配置 token，数据只在本机。"); }
+  }
+
+  $("synSave").addEventListener("click", function(){
+    setCfg({
+      owner: $("synOwner").value.trim() || "apple-PC",
+      repo: $("synRepo").value.trim() || "pause-helper-data",
+      path: $("synPath").value.trim() || "data/pause-data.json",
+      token: $("synToken").value.trim(),
+      auto: $("synAuto").checked
+    });
+    setStatus("设置已保存在本机浏览器", "ok");
+    $("storeNote").textContent = describeStorage();
+  });
+  $("synNow").addEventListener("click", function(){ pushToRepo(false); });
+  $("synPull").addEventListener("click", pullFromRepo);
+  $("synClear").addEventListener("click", function(){
+    setCfg({ token: "", auto: false });
+    $("synToken").value = "";
+    $("synAuto").checked = false;
+    setStatus("token 已清除");
+  });
+
+  /* ---------------- storage info ---------------- */
+  function describeStorage(){
+    var used = 0;
+    try{
+      Object.keys(localStorage).forEach(function(k){
+        if(k.indexOf("pause") === 0) used += (localStorage.getItem(k) || "").length;
+      });
+    }catch(e){}
+    return "本机已存：" + uniq(checkins).length + " 天打卡 / " + records.length + " 条记录 / " + delays.length + " 次延迟，约 " + (used/1024).toFixed(1) + " KB。";
+  }
+
+  /* ---------------- boot ---------------- */
+  function renderAll(){
+    renderStats();
+    renderHeat();
+    renderRecords();
+    $("storeNote").textContent = describeStorage();
+  }
+
+  fillCfgUI();
+  renderAll();
 })();
 </script>
 </body>
