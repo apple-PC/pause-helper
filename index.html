@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>暂停助手</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#fff; --text:#1f2937; --muted:#6b7280;
+    --main:#2563eb; --main-dark:#1d4ed8; --danger:#dc2626;
+    --ok:#059669; --line:#e5e7eb; --soft:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:16px; font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-size:22px;margin:8px 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.04);
+  }
+  h2{font-size:17px;margin:0 0 10px}
+  button{
+    border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:600;
+    cursor:pointer;background:var(--main);color:#fff;
+  }
+  button:hover{background:var(--main-dark)}
+  button.secondary{background:#eef2ff;color:var(--main-dark)}
+  button.secondary:hover{background:#e0e7ff}
+  button.ghost{background:#f3f4f6;color:#374151}
+  button.ghost:hover{background:#e5e7eb}
+  button.danger{background:#fee2e2;color:var(--danger)}
+  button.danger:hover{background:#fecaca}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .timer{
+    font-size:46px;font-weight:800;text-align:center;letter-spacing:2px;
+    margin:12px 0;color:var(--main-dark);font-variant-numeric:tabular-nums;
+  }
+  .steps{
+    background:var(--soft);border-radius:12px;padding:12px 14px;margin:10px 0;
+  }
+  .steps ol{margin:0;padding-left:20px}
+  .steps li{margin:4px 0}
+  .hidden{display:none}
+  .streak{font-size:30px;font-weight:800;color:var(--ok)}
+  label{display:block;font-size:14px;font-weight:600;margin:8px 0 4px}
+  input,textarea,select{
+    width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;
+    font:inherit;background:#fff;color:var(--text);
+  }
+  textarea{min-height:64px;resize:vertical}
+  .record{
+    border-top:1px solid var(--line);padding:10px 0;font-size:14px;
+  }
+  .record:first-child{border-top:0}
+  .record .meta{color:var(--muted);font-size:12px}
+  .record .del{float:right;font-size:12px;padding:4px 8px}
+  details summary{cursor:pointer;font-weight:700}
+  .muted{color:var(--muted);font-size:13px}
+  .ok-text{color:var(--ok);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>暂停助手</h1>
+  <div class="sub">目标不是跟记忆打架，而是：离开场景 → 延迟 → 记录 → 恢复。</div>
+
+  <section class="card">
+    <h2>我现在想重复旧习惯</h2>
+    <p class="muted">先别硬扛，点下面开始 15 分钟延迟。有念头不算没守住。</p>
+    <button id="startBtn">开始 15 分钟延迟</button>
+
+    <div id="timerBox" class="hidden">
+      <div id="timer" class="timer">15:00</div>
+      <div class="steps">
+        <strong>现在做这几步：</strong>
+        <ol>
+          <li>立刻离开床/当前房间，开灯。</li>
+          <li>冷水洗手洗脸，喝几口水。</li>
+          <li>站着做深蹲/拉伸，或出门走一圈。</li>
+          <li>慢慢呼吸：吸 4 秒 → 停 2 秒 → 呼 6 秒。</li>
+          <li>告诉自己：念头像浪，会升会降，我不必马上跟着走。</li>
+        </ol>
+      </div>
+      <div class="row">
+        <button id="againBtn" class="secondary">再延迟 5 分钟</button>
+        <button id="doneBtn">我完成了</button>
+        <button id="stopBtn" class="ghost">先停下计时</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>今日打卡</h2>
+    <div class="row">
+      <div>当前连续：<span id="streak" class="streak">0</span> 天</div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="checkinBtn">今天完成了</button>
+      <span id="checkinMsg" class="ok-text"></span>
+    </div>
+    <p class="muted">只记录“今天完成了”，不写自责小作文。</p>
+  </section>
+
+  <section class="card">
+    <h2>记录容易发生的时刻</h2>
+    <form id="recordForm">
+      <label for="scene">当时在哪/在做什么</label>
+      <input id="scene" placeholder="例如：睡前躺床上刷手机" required />
+
+      <label for="trigger">当时是什么念头/情境</label>
+      <input id="trigger" placeholder="例如：无聊、焦虑、刷到不想看的内容" required />
+
+      <label for="plan">下次怎么打断</label>
+      <input id="plan" placeholder="例如：手机放远，起身洗脸，计时15分钟" required />
+
+      <div class="row" style="margin-top:10px">
+        <button type="submit">保存记录</button>
+        <button type="button" id="clearRecords" class="danger">清空全部记录</button>
+      </div>
+    </form>
+    <div id="records" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>没守住后的恢复预案（点开）</summary>
+      <ol>
+        <li>不骂自己、不发毒誓、不说“全完了”。</li>
+        <li>24 小时内恢复原计划。</li>
+        <li>只记一句：什么时候、在哪、当时什么念头、下次怎么打断。</li>
+        <li>调整环境，比惩罚自己有用。</li>
+        <li>如果痛苦到影响睡眠、学习、情绪，找学校心理老师、心理咨询或精神心理科。</li>
+      </ol>
+    </details>
+  </section>
+
+  <p class="muted">提示：这是自助辅助工具，不替代专业帮助。所有记录只保存在本机浏览器。</p>
+</div>
+
+<script>
+(function(){
+  const TIMER_KEY = "pauseTimer";
+  const CHECK_KEY = "pauseCheckinDates";
+  const REC_KEY = "pauseRecords";
+
+  const startBtn = document.getElementById("startBtn");
+  const timerBox = document.getElementById("timerBox");
+  const timerEl = document.getElementById("timer");
+  const againBtn = document.getElementById("againBtn");
+  const doneBtn = document.getElementById("doneBtn");
+  const stopBtn = document.getElementById("stopBtn");
+
+  let remaining = 15 * 60;
+  let interval = null;
+
+  function fmtTime(sec){
+    const m = Math.floor(sec / 60).toString().padStart(2,"0");
+    const s = Math.floor(sec % 60).toString().padStart(2,"0");
+    return m + ":" + s;
+  }
+
+  function renderTimer(){
+    timerEl.textContent = fmtTime(Math.max(0, remaining));
+  }
+
+  function tick(){
+    remaining--;
+    renderTimer();
+    if(remaining <= 0){
+      clearInterval(interval);
+      interval = null;
+      timerEl.textContent = "00:00";
+      alert("你已经延迟了 15 分钟。念头会降下来。可以继续延迟，或记录容易发生的时刻。");
+    }
+  }
+
+  function startTimer(minutes){
+    if(interval) clearInterval(interval);
+    remaining = minutes * 60;
+    renderTimer();
+    timerBox.classList.remove("hidden");
+    startBtn.classList.add("hidden");
+    interval = setInterval(tick, 1000);
+  }
+
+  function stopTimer(){
+    if(interval) clearInterval(interval);
+    interval = null;
+    timerBox.classList.add("hidden");
+    startBtn.classList.remove("hidden");
+  }
+
+  startBtn.addEventListener("click", () => startTimer(15));
+  againBtn.addEventListener("click", () => startTimer(5));
+  stopBtn.addEventListener("click", stopTimer);
+  doneBtn.addEventListener("click", () => {
+    stopTimer();
+    markCheckin();
+  });
+
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + "-" +
+      String(d.getMonth()+1).padStart(2,"0") + "-" +
+      String(d.getDate()).padStart(2,"0");
+  }
+
+  function dateStr(d){
+    return d.getFullYear() + "-" +
+      String(d.getMonth()+1).padStart(2,"0") + "-" +
+      String(d.getDate()).padStart(2,"0");
+  }
+
+  function getCheckins(){
+    try{
+      const arr = JSON.parse(localStorage.getItem(CHECK_KEY) || "[]");
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+
+  function saveCheckins(arr){
+    localStorage.setItem(CHECK_KEY, JSON.stringify(arr));
+  }
+
+  function calcStreak(){
+    const set = new Set(getCheckins());
+    let d = new Date();
+    d.setHours(0,0,0,0);
+    if(!set.has(dateStr(d))){
+      d.setDate(d.getDate() - 1);
+      if(!set.has(dateStr(d))) return 0;
+    }
+    let count = 0;
+    while(set.has(dateStr(d))){
+      count++;
+      d.setDate(d.getDate() - 1);
+    }
+    return count;
+  }
+
+  function renderStreak(){
+    document.getElementById("streak").textContent = calcStreak();
+    const today = todayStr();
+    const msg = document.getElementById("checkinMsg");
+    if(getCheckins().includes(today)){
+      msg.textContent = "今天已完成 ✓";
+      document.getElementById("checkinBtn").disabled = true;
+    }else{
+      msg.textContent = "";
+      document.getElementById("checkinBtn").disabled = false;
+    }
+  }
+
+  function markCheckin(){
+    const arr = getCheckins();
+    const today = todayStr();
+    if(!arr.includes(today)){
+      arr.push(today);
+      saveCheckins(arr);
+    }
+    renderStreak();
+  }
+
+  document.getElementById("checkinBtn").addEventListener("click", markCheckin);
+
+  const form = document.getElementById("recordForm");
+  const sceneEl = document.getElementById("scene");
+  const triggerEl = document.getElementById("trigger");
+  const planEl = document.getElementById("plan");
+  const recordsEl = document.getElementById("records");
+
+  function getRecords(){
+    try{
+      const arr = JSON.parse(localStorage.getItem(REC_KEY) || "[]");
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+
+  function saveRecords(arr){
+    localStorage.setItem(REC_KEY, JSON.stringify(arr));
+  }
+
+  function renderRecords(){
+    const arr = getRecords();
+    recordsEl.innerHTML = "";
+    if(arr.length === 0){
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = "还没有记录。";
+      recordsEl.appendChild(p);
+      return;
+    }
+    arr.slice().reverse().forEach(item => {
+      const div = document.createElement("div");
+      div.className = "record";
+
+      const del = document.createElement("button");
+      del.className = "del danger";
+      del.textContent = "删除";
+      del.addEventListener("click", () => {
+        const next = getRecords().filter(r => r.id !== item.id);
+        saveRecords(next);
+        renderRecords();
+      });
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = item.time;
+
+      const line1 = document.createElement("div");
+      line1.textContent = "场景：" + item.scene;
+
+      const line2 = document.createElement("div");
+      line2.textContent = "当时的念头/情境：" + item.trigger;
+
+      const line3 = document.createElement("div");
+      line3.textContent = "下次打断：" + item.plan;
+
+      div.appendChild(del);
+      div.appendChild(meta);
+      div.appendChild(line1);
+      div.appendChild(line2);
+      div.appendChild(line3);
+      recordsEl.appendChild(div);
+    });
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const scene = sceneEl.value.trim();
+    const trigger = triggerEl.value.trim();
+    const plan = planEl.value.trim();
+    if(!scene || !trigger || !plan) return;
+
+    const arr = getRecords();
+    arr.push({
+      id: String(Date.now()) + Math.random().toString(16).slice(2),
+      time: new Date().toLocaleString(),
+      scene, trigger, plan
+    });
+    saveRecords(arr);
+    form.reset();
+    renderRecords();
+  });
+
+  document.getElementById("clearRecords").addEventListener("click", () => {
+    if(confirm("确定清空全部记录？")){
+      saveRecords([]);
+      renderRecords();
+    }
+  });
+
+  renderTimer();
+  renderStreak();
+  renderRecords();
+})();
+</script>
+</body>
+</html>
